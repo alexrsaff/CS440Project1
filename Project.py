@@ -122,6 +122,10 @@ class GameBoard:
 	def manhattanDistance(self, row, col):
 		if not self.__sizeCheck(row,col): raise
 		return self.size - row + self.size - col
+	def reset(self):
+		self.location = [0,0]
+		self.visited = [[False for i in range(self.size)] for j in range(self.size)]
+		self.visited[0][0]=True
 
 def AnimateSolution(board,path):
 	for item in path:
