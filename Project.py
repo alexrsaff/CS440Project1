@@ -203,6 +203,34 @@ def BFS(board, animate = False):
 		print("Cannot be solved")
 		return -1*board.getSize() - len(prevTile)
 	return
+
+def AStar(board, animate = False):
+	cue = OrderedCue()
+	visited = []
+	prevTile = {}
+	cue.add((0,0),board.manhattanDistance(0,0))
+	solved = False
+	while(cue.length()>0):
+		print(cue)
+		currTile = cue.pop()
+		visited.append(currTile)
+		tiles = board.availableTiles(currTile[0],currTile[1])
+		for tile in tiles:
+			if tile in visited:
+				continue
+			cue.add(tile,board.manhattanDistance(tile[0],tile[1]))
+			prevTile[tile] = currTile
+			if tile == board.getTargetTile():
+				solved = True
+				break
+		if solved == True:
+			break
+	if solved == True:
+		path = getPath(board,prevTile,animate)
+		return len(path)
+	print("Cannot be solved")
+	return -1*board.getSize() - len(prevTile)
+
 myGame = GameBoard(int(input("Enter map size: ")))
 myGame.randomInit()
 print(BFS(myGame, animate=True))
