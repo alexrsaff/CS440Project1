@@ -127,6 +127,31 @@ class GameBoard:
 		self.visited = [[False for i in range(self.size)] for j in range(self.size)]
 		self.visited[0][0]=True
 
+class OrderedCue:
+	def __init__(self):
+	 self.cue = []
+	 return
+
+	def __repr__(self):
+	 return str(self.cue)
+	
+	def add(self,item,value):
+		position = 0
+		while position < len(self.cue) and self.cue[position][1] < value:
+			position+=1
+		self.cue.insert(position,(item,value))
+		return
+
+	def pop(self):
+		if len(self.cue) == 0:
+			return None
+		value = self.cue[0][0]
+		del(self.cue[0])
+		return value
+	
+	def length(self):
+		return len(self.cue)
+
 def AnimateSolution(board,path):
 	for item in path:
 		board.setLocation(item[0],item[1])
