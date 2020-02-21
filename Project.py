@@ -119,6 +119,9 @@ class GameBoard:
 		print(string)
 	def getSize(self):
 		return self.size*self.size
+	def manhattanDistance(self, row, col):
+		if not self.__sizeCheck(row,col): raise
+		return self.size - row + self.size - col
 
 def AnimateSolution(board,path):
 	for item in path:
