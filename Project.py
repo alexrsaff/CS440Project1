@@ -164,6 +164,17 @@ def AnimateSolution(board,path):
 	print(path)
 	return
 
+def getPath(board, prevTile, animate = False):
+	target = board.getTargetTile()
+	path = [board.getTargetTile()]
+	while target != (0,0):
+		path.append(prevTile[target])
+		target = prevTile[target]
+	if animate:
+		path.reverse()
+		AnimateSolution(board,path)
+	return path
+
 def BFS(board, animate = False):
 	cue = []
 	visited = []
@@ -186,14 +197,7 @@ def BFS(board, animate = False):
 				break
 		if solved: break
 	if solved:
-		target = board.getTargetTile()
-		path = [board.getTargetTile()]
-		while target != (0,0):
-			path.append(prevTile[target])
-			target = prevTile[target]
-		if animate:
-			path.reverse()
-			AnimateSolution(board,path)
+		path = getPath(board,prevTile,animate)
 		return len(path)
 	else:
 		print("Cannot be solved")
