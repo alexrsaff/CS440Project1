@@ -233,4 +233,6 @@ def AStar(board, animate = False):
 
 myGame = GameBoard(int(input("Enter map size: ")))
 myGame.randomInit()
-print(BFS(myGame, animate=True))
+print("BFS:", BFS(myGame, animate=True))
+myGame.reset()
+print("A*:", AStar(myGame, animate=True))
