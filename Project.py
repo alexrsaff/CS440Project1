@@ -238,29 +238,30 @@ def HClimbing(board, animate=False):
     cue = OrderedCue()
     visited = []
     prevTile = {}
-    currTile = (0,0)
+    currTile = (0, 0)
     prevLocation = currTile
-    cue.add((0, 0), board.getTile(0,0)+board.manhattanDistance(0, 0)-2)
+    cue.add((0, 0), board.getTile(0, 0) + board.manhattanDistance(0, 0) - 2)
     solved = False
-    while (cue.length() > 0):
+    while cue.length() > 0:
         currTile = cue.pop()
         if getHuristics(board, prevLocation[0], prevLocation[1]) >= getHuristics(board, currTile[0], currTile[1]):
-            currTile = currTile
+            prevLocation = currTile
+            while cue.length() > 0:
+                cue.pop()
             visited.append(currTile)
             tiles = board.availableTiles(currTile[0], currTile[1])
             for tile in tiles:
                 if tile in visited:
                     continue
-                cue.add(tile, board.getTile(tile[0],tile[1])+board.manhattanDistance(tile[0], tile[1])-2)
+                cue.add(tile, board.getTile(tile[0], tile[1]) + board.manhattanDistance(tile[0], tile[1]) - 2)
                 prevTile[tile] = currTile
-                # print(prevTile)
                 if tile == board.getTargetTile():
+                    prevLocation = currTile
                     solved = True
                     break
             if solved == True:
                 break
         else:
-            currTile=prevLocation
             continue
     if solved == True:
         path = getPath(board, prevTile, animate)
