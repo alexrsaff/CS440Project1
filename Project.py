@@ -1,6 +1,7 @@
 import random
 import os
 from time import sleep
+from copy import deepcopy
 class GameBoard:
 	def __init__(self, n):
 		self.gameBoard = [[0 for i in range(n)] for j in range(n)]
@@ -33,7 +34,7 @@ class GameBoard:
 		self.gameBoard[self.size-1][self.size-1] = 0
 		return
 	def setTileRandomly(self,row,col):
-		self.setTile(row,col,random.randint(1,self.size-1))
+		self.setTile(row,col,random.randint(1,max(self.size-row-1,self.size-col-1,col-1,row-1)))
 		return
 	def getTile(self,row,col):
 		if not self.__sizeCheck(row,col): raise
@@ -84,7 +85,6 @@ class GameBoard:
 	def availableTiles(self,row,col):
 		moves = self.legalMoves(row,col)
 		amount = self.gameBoard[row][col]
-		# print(moves)
 		tiles = []
 		if "up" in moves:
 			tiles.append((row-amount,col))
@@ -118,7 +118,7 @@ class GameBoard:
 			string += ("|\n")
 		print(string)
 	def getSize(self):
-		return self.size*self.size
+		return self.size
 	def manhattanDistance(self, row, col):
 		if not self.__sizeCheck(row,col): raise
 		return self.size - row + self.size - col
@@ -126,6 +126,11 @@ class GameBoard:
 		self.location = [0,0]
 		self.visited = [[False for i in range(self.size)] for j in range(self.size)]
 		self.visited[0][0]=True
+	def getBoard(self):
+		return self.gameBoard
+	def makeFromCopy(self, board):
+
+		self.gameBoard = deepcopy(board.getBoard())
 
 class OrderedCue:
 	def __init__(self):
@@ -162,6 +167,7 @@ def AnimateSolution(board,path):
 	os.system('cls' if os.name == 'nt' else 'clear')
 	board.printVisited()
 	print(path)
+	board.reset()
 	return
 
 def getPath(board, prevTile, animate = False):
@@ -200,8 +206,7 @@ def BFS(board, animate = False):
 		path = getPath(board,prevTile,animate)
 		return len(path)
 	else:
-		print("Cannot be solved")
-		return -1*board.getSize() - len(prevTile)
+		return -1*board.getSize()*board.getSize() - len(prevTile)
 	return
 
 def AStar(board, animate = False):
@@ -211,7 +216,6 @@ def AStar(board, animate = False):
 	cue.add((0,0),board.manhattanDistance(0,0))
 	solved = False
 	while(cue.length()>0):
-		print(cue)
 		currTile = cue.pop()
 		visited.append(currTile)
 		tiles = board.availableTiles(currTile[0],currTile[1])
@@ -228,52 +232,45 @@ def AStar(board, animate = False):
 	if solved == True:
 		path = getPath(board,prevTile,animate)
 		return len(path)
-	print("Cannot be solved")
-	return -1*board.getSize() - len(prevTile)
+	return -1*board.getSize()*board.getSize() - len(prevTile)
 
 def getHuristics(board, row, coloumn):
     return board.getTile(row, coloumn) + myGame.manhattanDistance(row, coloumn) - 2
 
-def HClimbing(board, animate=False):
-    cue = OrderedCue()
-    visited = []
-    prevTile = {}
-    currTile = (0, 0)
-    prevLocation = currTile
-    cue.add((0, 0), board.getTile(0, 0) + board.manhattanDistance(0, 0) - 2)
-    solved = False
-    while cue.length() > 0:
-        currTile = cue.pop()
-        if getHuristics(board, prevLocation[0], prevLocation[1]) >= getHuristics(board, currTile[0], currTile[1]):
-            prevLocation = currTile
-            while cue.length() > 0:
-                cue.pop()
-            visited.append(currTile)
-            tiles = board.availableTiles(currTile[0], currTile[1])
-            for tile in tiles:
-                if tile in visited:
-                    continue
-                cue.add(tile, board.getTile(tile[0], tile[1]) + board.manhattanDistance(tile[0], tile[1]) - 2)
-                prevTile[tile] = currTile
-                if tile == board.getTargetTile():
-                    prevLocation = currTile
-                    solved = True
-                    break
-            if solved == True:
-                break
-        else:
-            continue
-    if solved == True:
-        path = getPath(board, prevTile, animate)
-        return len(path)
-    print("Cannot be solved")
-    return -1 * board.getSize() - len(prevTile)
+def hillClimbing(oldBoard, evalMethod, iterations = 10000):
+	size = oldBoard.getSize()
+	oldScore = BFS(oldBoard) if evalMethod == "BFS" else AStar(oldBoard)
+	currIteration = 0
+	while currIteration < iterations:
+		newBoard = GameBoard(size)
+		newBoard.makeFromCopy(oldBoard)
+		randRow = random.randint(1,size-1)
+		randCol = random.randint(1,size-1)
+		newBoard.setTileRandomly(randRow,randCol)
+		newScore = BFS(newBoard) if evalMethod == "BFS" else AStar(newBoard)
+		if newScore > oldScore:
+			oldBoard = newBoard
+			oldScore = newScore
+		currIteration +=1
+	return oldBoard, oldScore
 
+def randomGen(oldBoard, evalMethod, iterations = 10000):
+	size = oldBoard.getSize()
+	oldScore = BFS(oldBoard) if evalMethod == "BFS" else AStar(oldBoard)
+	currIteration = 0
+	while currIteration < iterations:
+		newBoard = GameBoard(size)
+		newBoard.randomInit()
+		newScore = BFS(newBoard) if evalMethod == "BFS" else AStar(newBoard)
+		if newScore > oldScore:
+			oldBoard = newBoard
+			oldScore = newScore
+		currIteration +=1
+	return oldBoard, oldScore
 
 myGame = GameBoard(int(input("Enter map size: ")))
+evalMethod = input("Enter BFS or A*: ")
 myGame.randomInit()
-print("BFS:", BFS(myGame, animate=True))
-myGame.reset()
-print("A*:", AStar(myGame, animate=True))
-myGame.reset()
-print("Hill Climbing:", HClimbing(myGame, animate=True))
+print("Hill Climbing:", hillClimbing(myGame, evalMethod)[1])
+print("Random Generation:", hillClimbing(myGame, evalMethod)[1])
+print("Genetic Algorithim:")
