@@ -2,6 +2,7 @@ import random
 import os
 from time import sleep
 from copy import deepcopy
+from tensorflow.keras.utils import Progbar
 class GameBoard:
 	def __init__(self, n):
 		self.gameBoard = [[0 for i in range(n)] for j in range(n)]
@@ -9,13 +10,14 @@ class GameBoard:
 		self.size = n
 		self.location = [0,0]
 		self.visited[0][0]=True
+		self.printLocation = False
 		return
 	def __repr__(self):
 		string = ""
 		for rowLoc in range(self.size):
 			string += ("|")
 			for colLoc in range(self.size):
-				if [rowLoc,colLoc] == self.location:
+				if self.printLocation and [rowLoc,colLoc] == self.location:
 					string += ("XX ")
 				elif self.gameBoard[rowLoc][colLoc] > 9:
 					string += (str(self.gameBoard[rowLoc][colLoc]) + " ")
@@ -110,7 +112,7 @@ class GameBoard:
 			string += ("|")
 			for colLoc in range(self.size):
 				if self.visited[rowLoc][colLoc]:
-					string += ("XX ")
+					string += ("VV ")
 				elif self.gameBoard[rowLoc][colLoc] > 9:
 					string += (str(self.gameBoard[rowLoc][colLoc]) + " ")
 				else:
@@ -131,6 +133,8 @@ class GameBoard:
 	def makeFromCopy(self, board):
 
 		self.gameBoard = deepcopy(board.getBoard())
+	def setPrintLocation(self,setState):
+		self.printLocation = setState
 
 class OrderedCue:
 	def __init__(self):
@@ -166,7 +170,7 @@ def AnimateSolution(board,path):
 		sleep(1)
 	os.system('cls' if os.name == 'nt' else 'clear')
 	board.printVisited()
-	print(path)
+	print("Path:", path)
 	board.reset()
 	return
 
@@ -237,20 +241,23 @@ def AStar(board, animate = False):
 def getHuristics(board, row, coloumn):
     return board.getTile(row, coloumn) + myGame.manhattanDistance(row, coloumn) - 2
 
-def hillClimbing(oldBoard, evalMethod, iterations = 10000):
+def hillClimbing(oldBoard, evalMethod, iterations = 10000, changesPerIteration = 1):
 	size = oldBoard.getSize()
 	oldScore = BFS(oldBoard) if evalMethod == "BFS" else AStar(oldBoard)
 	currIteration = 0
+	loadingBar = Progbar(target = iterations)
 	while currIteration < iterations:
 		newBoard = GameBoard(size)
 		newBoard.makeFromCopy(oldBoard)
-		randRow = random.randint(1,size-1)
-		randCol = random.randint(1,size-1)
-		newBoard.setTileRandomly(randRow,randCol)
+		for i in range(changesPerIteration):
+			randRow = random.randint(1,size-1)
+			randCol = random.randint(1,size-1)
+			newBoard.setTileRandomly(randRow,randCol)
 		newScore = BFS(newBoard) if evalMethod == "BFS" else AStar(newBoard)
 		if newScore > oldScore:
 			oldBoard = newBoard
 			oldScore = newScore
+		loadingBar.add(1)
 		currIteration +=1
 	return oldBoard, oldScore
 
@@ -258,6 +265,7 @@ def randomGen(oldBoard, evalMethod, iterations = 10000):
 	size = oldBoard.getSize()
 	oldScore = BFS(oldBoard) if evalMethod == "BFS" else AStar(oldBoard)
 	currIteration = 0
+	loadingBar = Progbar(target = iterations)
 	while currIteration < iterations:
 		newBoard = GameBoard(size)
 		newBoard.randomInit()
@@ -265,12 +273,98 @@ def randomGen(oldBoard, evalMethod, iterations = 10000):
 		if newScore > oldScore:
 			oldBoard = newBoard
 			oldScore = newScore
+		loadingBar.add(1)
 		currIteration +=1
 	return oldBoard, oldScore
 
+def crossBoards(board1,board2,amount = 10, mutationChance = 10):
+	size = board1.getSize()
+	boardList = [GameBoard(size) for i in range(size)]
+	for row in range(size):
+		for col in range(size):
+			b1Cell = board1.getTile(row,col)
+			b2Cell = board2.getTile(row,col)
+			for board in boardList:
+				if random.randint(1,mutationChance) == 0:
+					board.setTileRandomly(row,col)
+				elif random.randint(0,1) == 0:
+					board.setTile(row,col,b1Cell)
+				else:
+					board.setTile(row,col,b2Cell)
+	return boardList
+
+def geneticAlgorithm(board1, evalMethod, iterations = 10000, mutationRate = 10):
+	size = board1.getSize()
+	board2 = GameBoard(size)
+	board2.randomInit()
+	currIteration = 0
+	loadingBar = Progbar(target = iterations)
+	while currIteration < iterations:
+		candidates = crossBoards(board1,board2, mutationChance = mutationRate)
+		board1 = candidates[0]
+		board2 = candidates[1]
+		score1 = BFS(board1) if evalMethod == "BFS" else AStar(board1)
+		score2 = BFS(board2) if evalMethod == "BFS" else AStar(board2)
+		for board in candidates[2:]:
+			bScore = BFS(board) if evalMethod == "BFS" else AStar(board)
+			if bScore > score1:
+				score2 = score1
+				score1 = bScore
+				board2 = board1
+				board1 = board
+			elif bScore > score2:
+				board2 = board
+				score2 = bScore
+		loadingBar.add(1)
+		currIteration+=1
+	if score1>score2:
+		return board1, score1
+	return board2, score2
+
 myGame = GameBoard(int(input("Enter map size: ")))
 evalMethod = input("Enter BFS or A*: ")
+iterations = int(input("Number of puzzle creation iterations to perform: "))
+mutationRate = int(input("1 our of x chance of genetic mutation: "))
+changesPerIteration = int(input("Number of changes to make to board every iteration during hill climbing: "))
 myGame.randomInit()
-print("Hill Climbing:", hillClimbing(myGame, evalMethod)[1])
-print("Random Generation:", hillClimbing(myGame, evalMethod)[1])
-print("Genetic Algorithim:")
+print("Initial Maze:")
+IM = myGame
+IMScore = BFS(myGame) if evalMethod == "BFS" else AStar(myGame)
+print("Best path:", IMScore)
+print("Hill Climbing:")
+HC = hillClimbing(myGame, evalMethod, iterations = iterations, changesPerIteration = changesPerIteration)
+HCScore = HC[1]
+HC = HC[0]
+print("Best path:", HCScore)
+print("Genetic Algorithm:")
+GA = geneticAlgorithm(myGame, evalMethod, iterations = iterations, mutationRate = mutationRate)
+GAScore = GA[1]
+GA = GA[0]
+print("Best path:", GAScore)
+print("Random Generation:")
+RG = randomGen(myGame, evalMethod, iterations = iterations)
+RGScore = RG[1]
+RG = RG[0]
+print("Best path:", RGScore)
+
+if input("Print Initial Maze (Y/N): ") == "Y":
+	print(IM)
+if input("Print Hill Climbing Maze (Y/N): ") == "Y":
+	print(HC)
+if input("Print Genetic Algorithm Maze (Y/N): ") == "Y":
+	print(GA)
+if input("Print Random Generation Maze (Y/N): ") == "Y":
+	print(RG)
+
+if input("Print solution to Initial Maze (Y/N): ") == "Y":
+	IM.setPrintLocation(True)
+	BFS(IM, animate = True) if evalMethod == "BFS" else AStar(IM, animate = True)
+if input("Print solution to Hill Climbing Maze (Y/N): ") == "Y":
+	HC.setPrintLocation(True)
+	BFS(HC, animate = True) if evalMethod == "BFS" else AStar(HC, animate = True)
+if input("Print solution to Genetic Algorithm Maze (Y/N): ") == "Y":
+	GA.setPrintLocation(True)
+	BFS(GA, animate = True) if evalMethod == "BFS" else AStar(GA, animate = True)
+if input("Print solution to Random Generation Maze (Y/N): ") == "Y":
+	RG.setPrintLocation(True)
+	BFS(RG, animate = True) if evalMethod == "BFS" else AStar(RG, animate = True)
