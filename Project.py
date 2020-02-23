@@ -231,8 +231,48 @@ def AStar(board, animate = False):
 	print("Cannot be solved")
 	return -1*board.getSize() - len(prevTile)
 
+def getHuristics(board, row, coloumn):
+    return board.getTile(row, coloumn) + myGame.manhattanDistance(row, coloumn) - 2
+
+def HClimbing(board, animate=False):
+    cue = OrderedCue()
+    visited = []
+    prevTile = {}
+    currTile = (0,0)
+    prevLocation = currTile
+    cue.add((0, 0), board.getTile(0,0)+board.manhattanDistance(0, 0)-2)
+    solved = False
+    while (cue.length() > 0):
+        currTile = cue.pop()
+        if getHuristics(board, prevLocation[0], prevLocation[1]) >= getHuristics(board, currTile[0], currTile[1]):
+            currTile = currTile
+            visited.append(currTile)
+            tiles = board.availableTiles(currTile[0], currTile[1])
+            for tile in tiles:
+                if tile in visited:
+                    continue
+                cue.add(tile, board.getTile(tile[0],tile[1])+board.manhattanDistance(tile[0], tile[1])-2)
+                prevTile[tile] = currTile
+                # print(prevTile)
+                if tile == board.getTargetTile():
+                    solved = True
+                    break
+            if solved == True:
+                break
+        else:
+            currTile=prevLocation
+            continue
+    if solved == True:
+        path = getPath(board, prevTile, animate)
+        return len(path)
+    print("Cannot be solved")
+    return -1 * board.getSize() - len(prevTile)
+
+
 myGame = GameBoard(int(input("Enter map size: ")))
 myGame.randomInit()
 print("BFS:", BFS(myGame, animate=True))
 myGame.reset()
 print("A*:", AStar(myGame, animate=True))
+myGame.reset()
+print("Hill Climbing:", HClimbing(myGame, animate=True))
